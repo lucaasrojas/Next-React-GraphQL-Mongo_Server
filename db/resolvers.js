@@ -45,7 +45,7 @@ const resolvers = {
       try {
         const productos = await Producto.find({});
         return productos;
-      } catch (error) {}
+      } catch (error) { }
     },
     obtenerProducto: async (_, { id }) => {
       try {
@@ -66,7 +66,7 @@ const resolvers = {
         console.log("Error: obtenerClientes");
       }
     },
-    obtenerClientesVendedor: async (_, {}, ctx) => {
+    obtenerClientesVendedor: async (_, { }, ctx) => {
       console.log(ctx);
       try {
         const clientes = await Cliente.find({
@@ -90,7 +90,7 @@ const resolvers = {
     },
 
     // Pedidos
-    obtenerPedidosVendedor: async (_, {}, ctx) => {
+    obtenerPedidosVendedor: async (_, { }, ctx) => {
       const pedidos = await Pedido.find({ vendedor: ctx.usuario.id });
       return pedidos;
     },
@@ -106,6 +106,78 @@ const resolvers = {
 
       return pedido;
     },
+    obtenerPedidoEstado: async (_, { estado }, ctx) => {
+      const pedidos = await Pedido.find({ vendedor: ctx.usuario.id, estado: estado })
+
+      return pedidos
+    },
+
+    mejoresClientes: async () => {
+      // Las aggregate toma varios valores, muchas operaciones pero devuelve un solo reustlado
+      const clientes = await Pedido.aggregate([
+        { $match: { estado: "COMPLETADO" } },
+        {
+          $group: {
+            _id: "$cliente",
+            total: { $sum: '$total' }
+          }
+        },
+        {
+          $lookup: {
+            from: 'clientes', // es el nombre del modelo de donde se saca la info
+            localField: "_id",
+            foreignField: "_id",
+            as: "cliente"
+          }
+        },
+        {
+          $limit: 5
+        },
+        {
+          $sort: {
+            total: -1 // Ordena en descendente
+          }
+        }
+      ])
+
+      return clientes;
+    },
+
+    mejoresVendedores: async () => {
+      // Las aggregate toma varios valores, muchas operaciones pero devuelve un solo reustlado
+      const vendedores = await Pedido.aggregate([
+        { $match: { estado: "COMPLETADO" } },
+        {
+          $group: {
+            _id: "$vendedor",
+            total: { $sum: '$total' }
+          }
+        },
+        {
+          $lookup: { // Es como un inner join
+            from: 'usuarios', // es el nombre del modelo de donde se saca la info
+            localField: "_id",
+            foreignField: "_id",
+            as: "vendedor"
+          }
+        },
+        {
+          $limit: 5
+        },
+        {
+          $sort: {
+            total: -1 // Ordena en descendente
+          }
+        }
+      ])
+
+      return vendedores;
+    },
+    buscarProducto: async (_, { texto }) => {
+      // Usa el indice seteado en el modelo
+      const productos = await Producto.find({ $text: { $search: texto } })
+      return productos
+    }
   },
   Mutation: {
     nuevoUsuario: async (_, { input }) => {
@@ -117,10 +189,12 @@ const resolvers = {
         const usuario = new Usuario(input);
         usuario.save();
         return usuario;
-      } catch (error) {}
+      } catch (error) { }
     },
     autenticarUsuario: async (_, { input }) => {
+      console.log("input", input)
       const existe = await Usuario.findOne({ email: input.email });
+
       if (!existe) throw new Error("El usuario no existe");
 
       const passwordCorrecto = await bcryptjs.compare(
@@ -141,7 +215,7 @@ const resolvers = {
         const nuevoProducto = new Producto(input);
         nuevoProducto.save();
         return nuevoProducto;
-      } catch (error) {}
+      } catch (error) { }
     },
     actualizarProducto: async (_, { id, input }) => {
       let producto = await Producto.findById(id);
@@ -170,7 +244,7 @@ const resolvers = {
         nuevoCliente.vendedor = ctx.usuario.id; // Agarro el ID del current user para asignarlo como vendedor
         const clienteGuardado = await nuevoCliente.save();
         return clienteGuardado;
-      } catch (error) {}
+      } catch (error) { }
     },
     actualizarCliente: async (_, { id, input }, ctx) => {
       const cliente = await Cliente.findById(id);
@@ -272,7 +346,7 @@ const resolvers = {
 
         await Pedido.findOneAndDelete({ _id: id });
         return "Pedido eliminado";
-      } catch (error) {}
+      } catch (error) { }
     },
   },
 };

@@ -22,4 +22,6 @@ const ProductosSchema = mongoose.Schema({
   },
 });
 
+ProductosSchema.index({ nombre: "text" }) // Se crea un indice que se puede consultar
+
 module.exports = mongoose.model("Producto", ProductosSchema);
