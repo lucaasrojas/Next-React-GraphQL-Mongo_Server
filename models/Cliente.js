@@ -24,7 +24,7 @@ const ClienteSchema = mongoose.Schema({
   },
   telefono: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
   },
   vendedor: {

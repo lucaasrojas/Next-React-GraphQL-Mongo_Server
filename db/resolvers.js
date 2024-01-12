@@ -27,9 +27,10 @@ const getClient = async () => {
 const resolvers = {
   Query: {
     // --- Usuarios ---
-    obtenerUsuario: async (_, { token }) => {
-      const usuarioId = await jwt.verify(token, process.env.SECRETA);
-      return usuarioId;
+    obtenerUsuario: async (_, { token }, ctx) => {
+      // const usuarioId = await jwt.verify(token, process.env.SECRETA);
+      // return usuarioId;
+      return ctx.usuario
     },
     obtenerUsuarios: async () => {
       try {
@@ -237,6 +238,7 @@ const resolvers = {
     crearCliente: async (_, { input }, ctx) => {
       // Verificar si esta registreado
       const cliente = await Cliente.findOne({ email: input.email });
+      console.log("cliente", cliente)
       if (cliente) throw new Error("Cliente ya registrado");
       // Guardar en DB
       try {
@@ -244,7 +246,9 @@ const resolvers = {
         nuevoCliente.vendedor = ctx.usuario.id; // Agarro el ID del current user para asignarlo como vendedor
         const clienteGuardado = await nuevoCliente.save();
         return clienteGuardado;
-      } catch (error) { }
+      } catch (error) {
+        console.error("ERROR - CrearCLiente", error)
+      }
     },
     actualizarCliente: async (_, { id, input }, ctx) => {
       const cliente = await Cliente.findById(id);
